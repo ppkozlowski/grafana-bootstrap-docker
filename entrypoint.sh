@@ -1,9 +1,17 @@
 #!/bin/sh
 
-GF_API=${GF_API:-http://grafana:3000/api}
-GF_TOKEN="Authorization: Bearer ${GF_TOKEN}"
+GF_API=${GF_API:-''}
+GF_USER=${GF_USER:-admin}
+GF_PASSWORD=${GF_PASSWORD:-admin}
+GF_TOKEN=${GF_TOKEN:-''}
 
 BACKEND=${BACKEND:-graphite}
+
+CURL_AUTH="-v -u $GF_USER:$GF_PASSWORD"
+
+if [ "x$GF_TOKEN" != "x" ] ; then
+  CURL_AUTH="-v -H \"Authorization: Bearer ${GF_TOKEN}"\"
+fi
 
 print_header() {
   echo " "
@@ -15,11 +23,11 @@ print_header() {
 wait_for_api() {
   echo -n "Waiting for Grafana API "
 
-  curl -s -f -H $GF_TOKEN ${GF_API}/datasources &> /dev/null
+  eval curl "${CURL_AUTH} -s -f ${GF_API}/datasources"
   while [ $? -ne 0 ]; do
     echo -n "."
     sleep 2
-    curl -s -f -H $GF_TOKEN ${GF_API}/datasources &> /dev/null
+    eval curl "${CURL_AUTH} -s -f ${GF_API}/datasources" &> /dev/null
   done
   echo " "
 }
@@ -29,7 +37,7 @@ import_data() {
   set -e
   echo " "
   echo $1
-  echo "$2" | curl -s -S -H 'Content-Type:application/json' -H $GF_TOKEN --data @- ${GF_API}$3
+  echo "$2" | eval curl -s -S -H 'Content-Type:application/json' ${CURL_AUTH} --data @- ${GF_API}$3
   echo " "
   set +e
 }
@@ -49,7 +57,7 @@ for datasource in `ls -1 /datasources/$BACKEND/*.json`; do
   datasource_json=$( cat $datasource )
   ds_name=$( echo $datasource_json | jq -r '.name' )
   api_path="${GF_API}/datasources/id/${ds_name}"
-  curl -f -s -u $GF_USER:$GF_PASSWORD "$api_path" &> /dev/null
+  eval curl -f -s ${CURL_AUTH} "$api_path" &> /dev/null
   if [ $? -eq 0 ]; then
     echo "Datasource already exists: ${datasource}"
   else

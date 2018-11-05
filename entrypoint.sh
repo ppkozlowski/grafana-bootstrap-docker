@@ -1,8 +1,7 @@
 #!/bin/sh
 
 GF_API=${GF_API:-http://grafana:3000/api}
-GF_USER=${GF_USER:-admin}
-GF_PASSWORD=${GF_PASSWORD:-admin}
+GF_TOKEN="Authorization: Bearer ${GF_TOKEN}"
 
 BACKEND=${BACKEND:-graphite}
 
@@ -16,11 +15,11 @@ print_header() {
 wait_for_api() {
   echo -n "Waiting for Grafana API "
 
-  curl -s -f -u $GF_USER:$GF_PASSWORD ${GF_API}/datasources &> /dev/null
+  curl -s -f -H $GF_TOKEN ${GF_API}/datasources &> /dev/null
   while [ $? -ne 0 ]; do
     echo -n "."
     sleep 2
-    curl -s -f -u $GF_USER:$GF_PASSWORD ${GF_API}/datasources &> /dev/null
+    curl -s -f -H $GF_TOKEN ${GF_API}/datasources &> /dev/null
   done
   echo " "
 }
@@ -30,7 +29,7 @@ import_data() {
   set -e
   echo " "
   echo $1
-  echo "$2" | curl -s -S -H 'Content-Type:application/json' -u $GF_USER:$GF_PASSWORD --data @- ${GF_API}$3
+  echo "$2" | curl -s -S -H 'Content-Type:application/json' -H $GF_TOKEN --data @- ${GF_API}$3
   echo " "
   set +e
 }
